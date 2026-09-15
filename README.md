@@ -1,66 +1,95 @@
-## 메모장
+# Penguin Memo
 
-Flask + SQLite로 만든 메모장 서비스입니다. 회원가입/로그인 후 메모를 작성, 조회, 수정, 삭제할 수 있습니다.
+Flask와 SQLite로 만든 개인 메모 서비스입니다. 회원가입과 로그인, 사용자별 메모 CRUD, 관리자 전용 회원 조회 기능을 제공합니다.
 
-### 설치
+## 주요 기능
+
+- 회원가입 및 로그인
+- 사용자별 메모 작성, 조회, 수정, 삭제
+- 메모 소유권 검증을 통한 다른 사용자 메모 접근 차단
+- 초기 관리자 계정과 관리자 전용 메모 자동 생성
+- 관리자 전용 전체 회원 목록 조회 (`/admin/users`)
+
+## 설치
+
+Python 3.10 이상을 권장합니다.
 
 ```bash
+python -m venv .venv
+```
+
+Windows:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 환경변수
+macOS / Linux:
 
-`.env.example`을 복사해 `.env`를 만들고 필요하면 값을 수정하세요.
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## 환경변수
+
+`.env.example`을 `.env`로 복사한 뒤 모든 플레이스홀더를 실제 값으로 교체합니다.
 
 ```bash
 cp .env.example .env
 ```
 
-- `SECRET_KEY` — Flask 세션 서명에 사용되는 키. **필수값**이며, 설정되어 있지 않으면 앱이 시작되지 않습니다.
-- `FLASK_DEBUG` — 디버그 모드 여부
-- `FLASK_PORT` — 실행 포트
-- `SESSION_COOKIE_SECURE` — HTTPS 환경에서만 세션 쿠키 전송
+필수 설정:
 
-`.env`와 그 변형(`.env.local` 등)은 `.gitignore`에 포함되어 있어 커밋되지 않습니다. `.env.example`만 커밋됩니다.
+- `SECRET_KEY`: 32자 이상의 예측 불가능한 세션 서명 키
+- `ADMIN_PASSWORD`: 12~128자의 관리자 초기 비밀번호
+- `ADMIN_MEMO_CONTENT`: `SBOB{...}` 형식의 관리자 초기 메모
 
-### 실행
+서버 설정:
+
+- `FLASK_PORT`: 서버 포트
+- `BIND_HOST`: 서버가 바인딩할 주소
+- `TRUSTED_HOSTS`: 허용할 호스트 목록
+- `SESSION_COOKIE_SECURE`: HTTPS에서 `true`로 설정
+
+실제 비밀번호, 플래그, 세션 키가 들어 있는 `.env`는 절대 커밋하지 마세요. `.env`, SQLite DB, 로그 파일은 `.gitignore`에서 제외됩니다.
+
+## 실행
 
 ```bash
 python app.py
 ```
 
-실행하면 프로젝트 폴더에 `memo.db` (SQLite) 파일이 자동으로 생성됩니다.
+앱 시작 시 DB 스키마가 생성 또는 마이그레이션됩니다. 관리자 계정과 초기 메모는 존재하지 않을 때 한 번만 생성됩니다.
 
-브라우저에서 http://127.0.0.1:5000 으로 접속하세요.
+waitress로 띄우기 때문에 코드를 수정해도 자동으로 재시작되지 않습니다. 개발 중에는 아래처럼 파일 변경을 감지해 자동으로 서버를 재시작하는 스크립트를 대신 사용하세요.
 
-### 기능
+```bash
+python watch_run.py
+```
 
-- 회원가입 (`/signup`)
-  - 아이디: 영문/숫자/밑줄(`_`) 3~20자
-  - 비밀번호: 4~128자, 비밀번호 확인 입력 필요
-  - 중복 아이디 가입 방지
-- 로그인 (`/login`) — 로그인 성공 시 세션 유지, 이미 로그인된 상태면 자동으로 메인으로 이동
-- 로그아웃 (`/logout`)
-- 메모 작성 / 목록 조회 / 상세 조회 / 수정 / 삭제 (로그인 후 이용 가능)
-  - 목록에서는 미리보기(80자)만 보여주고, 클릭하면 상세 페이지에서 전체 내용 확인 및 수정
-  - 본인이 작성한 메모만 조회/수정/삭제 가능 (다른 사용자의 메모는 접근 불가)
-  - 메모는 최대 2000자
-- 각 동작 결과를 화면 상단 메시지로 안내 (가입 완료, 로그인 실패, 메모 저장/삭제 등)
+`app.py` 또는 `.env`가 바뀔 때마다 기존 서버를 종료하고 새로 띄웁니다.
 
-### 보안
+## 적용된 보안 설정
 
-- 비밀번호는 평문 저장 없이 `werkzeug.security`로 해시하여 저장
-- 모든 SQL 쿼리는 파라미터 바인딩(`?`)을 사용해 SQL 인젝션을 방지
-- 메모 조회/수정/삭제는 항상 `user_id`로 소유권을 검증해 다른 사용자의 메모에 접근할 수 없음
-- `SECRET_KEY`는 하드코딩된 기본값 없이 `.env`에서만 읽어오며, 없으면 앱이 시작 시점에 에러를 발생시킴
-- 사용자 입력은 Jinja2 템플릿의 자동 이스케이프로 렌더링되어 XSS를 방지
-- 세션 쿠키는 `HttpOnly`, `SameSite=Lax`로 설정 (운영 환경에서는 `SESSION_COOKIE_SECURE=true`로 HTTPS 강제 권장)
-- `.gitignore`에서 `.env*`, DB 파일(`*.db`, `*.sqlite3`), 로그, IDE/OS 설정 파일 등을 폭넓게 제외해 민감 정보 실수 업로드를 방지
+- 비밀번호 단방향 해시 저장
+- 모든 SQL 쿼리 파라미터 바인딩
+- 서버 측 DB 역할을 이용한 관리자 권한 검증
+- 메모 조회·수정·삭제 시 사용자 소유권 검증
+- 모든 상태 변경 요청에 CSRF 토큰 검증
+- Jinja 자동 이스케이프를 통한 저장형 XSS 방어
+- 로그인 실패 횟수 제한
+- 세션 쿠키 `HttpOnly`, `SameSite=Lax` 적용
+- CSP, 클릭재킹 방지, MIME 스니핑 방지 등 보안 헤더 적용
+- 요청 본문 크기 제한 및 신뢰할 호스트 검증
+- Flask 개발 서버 대신 Waitress 사용
 
-### 파일 구성
+운영 환경에서는 HTTPS를 적용하고 `SESSION_COOKIE_SECURE=true`로 설정해야 합니다. 관리자 비밀번호와 플래그는 배포 또는 경기마다 새 값으로 교체하세요.
 
-- `app.py` — Flask 앱 전체 (라우트, DB 초기화 포함)
-- `requirements.txt` — 의존성 목록
-- `.env` — 로컬 환경변수 (git에 커밋되지 않음)
-- `.env.example` — 환경변수 예시 템플릿
-- `memo.db` — 최초 실행 시 자동 생성되는 SQLite DB 파일
+## 파일 구성
+
+- `app.py`: 애플리케이션, 라우트, DB 초기화
+- `watch_run.py`: 개발용 자동 재시작 스크립트 (`app.py`/`.env` 변경 감지)
+- `requirements.txt`: Python 의존성
+- `.env.example`: 공개 가능한 환경변수 템플릿
