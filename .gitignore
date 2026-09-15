@@ -1,0 +1,31 @@
+# 환경변수 (실제 값이 들어있는 파일만 제외, .env.example은 커밋 허용)
+.env
+.env.*
+!.env.example
+
+# 가상환경
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# DB / Flask instance
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+instance/
+
+# 로그 / 테스트 산출물
+*.log
+cookies.txt
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
