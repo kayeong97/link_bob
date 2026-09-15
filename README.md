@@ -45,8 +45,8 @@ python app.py
 
 ### 보안
 
-- 비밀번호는 평문 저장 없이 `werkzeug.security`로 해시하여 저장
-- 모든 SQL 쿼리는 파라미터 바인딩(`?`)을 사용해 SQL 인젝션을 방지
+- 비밀번호는 평문 저장 없이 해시하여 저장
+- 모든 SQL 쿼리는 파라미터 바인딩을 사용해 SQL 인젝션을 방지
 - 세션 쿠키는 `HttpOnly`, `SameSite=Lax`로 설정 (운영 환경에서는 `SESSION_COOKIE_SECURE=true`로 HTTPS 강제 권장)
 - `.gitignore`에서 `.env*`, DB 파일(`*.db`, `*.sqlite3`), 로그, IDE/OS 설정 파일 등을 폭넓게 제외해 민감 정보 실수 업로드를 방지
 
