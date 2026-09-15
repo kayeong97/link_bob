@@ -16,10 +16,10 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-- `SECRET_KEY` — Flask 세션 서명에 사용되는 키 (기본값: `dev-secret-key-change-me`)
-- `FLASK_DEBUG` — 디버그 모드 여부 (기본값: `true`)
-- `FLASK_PORT` — 실행 포트 (기본값: `5000`)
-- `SESSION_COOKIE_SECURE` — HTTPS 환경에서만 세션 쿠키 전송 (기본값: `false`, 운영 배포 시 `true` 권장)
+- `SECRET_KEY` — Flask 세션 서명에 사용되는 키
+- `FLASK_DEBUG` — 디버그 모드 여부
+- `FLASK_PORT` — 실행 포트
+- `SESSION_COOKIE_SECURE` — HTTPS 환경에서만 세션 쿠키 전송
 
 `.env`와 그 변형(`.env.local` 등)은 `.gitignore`에 포함되어 있어 커밋되지 않습니다. `.env.example`만 커밋됩니다.
 
