@@ -14,7 +14,7 @@ jobs:
           host: ${{ secrets.GCP_HOST }}
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
-        script: : |
+        script: :
           cd link_bob
           git pull origin main
           docker compose up -d --build
