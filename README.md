@@ -84,8 +84,6 @@ POST /api/notes              X-CSRF-Token: <발급받은 토큰>
 GET  /api/notes/<note_id>
 ```
 
-POST 본문은 `application/json`이며 `title`, `body` 이외의 필드는 거부됩니다.
-
 ## 적용된 보안 설정
 
 - 비밀번호 단방향 해시 저장
@@ -99,8 +97,6 @@ POST 본문은 `application/json`이며 `title`, `body` 이외의 필드는 거�
 - CSP, 클릭재킹 방지, MIME 스니핑 방지 등 보안 헤더 적용
 - 요청 본문 크기 제한 및 신뢰할 호스트 검증
 - Flask 개발 서버 대신 Waitress 사용
-
-운영 환경에서는 HTTPS를 적용하고 `SESSION_COOKIE_SECURE=true`로 설정해야 합니다. 관리자 비밀번호와 플래그는 배포 또는 경기마다 새 값으로 교체하세요.
 
 ## 파일 구성
 
