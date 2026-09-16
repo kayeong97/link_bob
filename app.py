@@ -475,7 +475,6 @@ def api_list_notes():
 
 @app.get("/api/csrf-token")
 def api_csrf_token():
-    """Issue a same-origin token required by all state-changing API requests."""
     return jsonify({"csrf_token": csrf_token()})
 
 
