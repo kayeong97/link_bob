@@ -216,12 +216,12 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
 @media(max-width:650px){.nav{align-items:flex-start;padding:12px}.hero{grid-template-columns:1fr;text-align:center;padding:28px 20px}.penguin{transform:scale(.85)}.page{padding:20px 14px}.nav div{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end}}
 </style>"""
 HEADER = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Penguin Memo Vault</title>""" + STYLE + """</head><body><nav class="nav"><a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">🐧</span>Penguin Memo Vault</a><div>
+<title>🐧 Memo Vault</title>""" + STYLE + """</head><body><nav class="nav"><a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">🐧</span>Memo Vault</a><div>
 {% if g.current_user %}<span>{{ g.current_user['username'] }}</span>{% if g.current_user['role'] == 'admin' %}<a href="{{ url_for('admin_users') }}">회원 관리</a>{% endif %}
 <form class="inline" method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>로그아웃</button></form>
 {% else %}<a href="{{ url_for('login') }}">로그인</a><a href="{{ url_for('signup') }}">회원가입</a>{% endif %}</div></nav><main class="page">
 {% for message in get_flashed_messages() %}<div class="flash">{{ message }}</div>{% endfor %}"""
-FOOTER = """</main><footer class="site-footer">🐧 Penguin Memo · 간단한 개인 메모장</footer></body></html>"""
+FOOTER = """</main><footer class="site-footer">🐧 Memo · 간단한 개인 메모장</footer></body></html>"""
 
 
 def render_page(content, **context):
@@ -232,7 +232,7 @@ def render_page(content, **context):
 def index():
     if g.current_user is None:
         return render_page("""<section class="hero"><div class="penguin" aria-hidden="true"><span class="eyes"></span><span class="feet"></span></div>
-        <div><h1>Penguin Memo</h1><p>필요한 내용을 간편하게 기록하고 관리하세요.</p>
+        <div><h1>🐧 Memo</h1><p>필요한 내용을 간편하게 기록하고 관리하세요.</p>
         <div class="hero-actions"><a href="{{ url_for('login') }}">로그인</a><a href="{{ url_for('signup') }}">회원가입</a></div></div></section>""")
     rows = get_db().execute(
         "SELECT id, content, updated_at FROM memo WHERE user_id = ? ORDER BY updated_at DESC", (g.current_user["id"],)
