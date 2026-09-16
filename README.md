@@ -71,6 +71,21 @@ python watch_run.py
 
 `app.py` 또는 `.env`가 바뀔 때마다 기존 서버를 종료하고 새로 띄웁니다.
 
+## Notes API 보안 사용법
+
+API는 웹 로그인으로 만들어진 세션 쿠키를 사용합니다. 상태를 변경하는 요청에는 먼저
+`GET /api/csrf-token`으로 토큰을 발급받고 같은 세션 쿠키와 함께
+`X-CSRF-Token` 헤더로 보내야 합니다.
+
+```text
+GET  /api/csrf-token
+GET  /api/notes
+POST /api/notes              X-CSRF-Token: <발급받은 토큰>
+GET  /api/notes/<note_id>
+```
+
+POST 본문은 `application/json`이며 `title`, `body` 이외의 필드는 거부됩니다.
+
 ## 적용된 보안 설정
 
 - 비밀번호 단방향 해시 저장

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from functools import wraps
 
 from dotenv import load_dotenv
-from flask import Flask, abort, flash, g, redirect, render_template_string, request, session, url_for
+from flask import Flask, abort, flash, g, jsonify, redirect, render_template_string, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
@@ -19,9 +19,13 @@ USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,20}$")
 PASSWORD_MIN_LENGTH = 12
 PASSWORD_MAX_LENGTH = 128
 MEMO_MAX_LENGTH = 2000
+NOTE_TITLE_MAX_LENGTH = 200
+NOTE_BODY_MAX_LENGTH = 4000
+NOTE_MAX_PER_USER = 1000
 ADMIN_USERNAME = "admin"
 LOGIN_LIMIT = 5
 LOGIN_WINDOW_SECONDS = 300
+LOGIN_BUCKET_LIMIT = 10_000
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
 if len(SECRET_KEY) < 32 or SECRET_KEY == "{change_secret_key}":
@@ -93,6 +97,27 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
             )
         """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS note (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                body TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
+            )
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS note_user_id ON note(user_id)")
+        db.execute("DROP TRIGGER IF EXISTS note_user_quota")
+        db.execute(f"""
+            CREATE TRIGGER note_user_quota
+            BEFORE INSERT ON note
+            WHEN (SELECT COUNT(*) FROM note WHERE user_id = NEW.user_id) >= {NOTE_MAX_PER_USER}
+            BEGIN
+                SELECT RAISE(ABORT, 'note quota exceeded');
+            END
+        """)
 
         admin = db.execute("SELECT id, role FROM user WHERE username = ?", (ADMIN_USERNAME,)).fetchone()
         if admin is None:
@@ -127,9 +152,13 @@ def load_user_and_check_csrf():
         if g.current_user is None:
             session.clear()
 
-    if request.method == "POST":
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
         expected = session.get("csrf_token", "")
-        supplied = request.form.get("csrf_token", "")
+        supplied = (
+            request.headers.get("X-CSRF-Token", "")
+            if request.path.startswith("/api/")
+            else request.form.get("csrf_token", "")
+        )
         if not expected or not supplied or not hmac.compare_digest(expected, supplied):
             abort(400, description="Invalid CSRF token.")
 
@@ -141,6 +170,8 @@ def security_headers(response):
         "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
     )
     response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cache-Control"] = "no-store"
@@ -190,13 +221,21 @@ def login_key(username):
 def login_is_limited(key):
     cutoff = time.monotonic() - LOGIN_WINDOW_SECONDS
     with _login_lock:
+        for stale_key, stamps in list(_login_attempts.items()):
+            if not stamps or stamps[-1] < cutoff:
+                _login_attempts.pop(stale_key, None)
         attempts = [stamp for stamp in _login_attempts.get(key, []) if stamp >= cutoff]
-        _login_attempts[key] = attempts
+        if attempts:
+            _login_attempts[key] = attempts
+        else:
+            _login_attempts.pop(key, None)
         return len(attempts) >= LOGIN_LIMIT
 
 
 def record_login_failure(key):
     with _login_lock:
+        if key not in _login_attempts and len(_login_attempts) >= LOGIN_BUCKET_LIMIT:
+            _login_attempts.pop(next(iter(_login_attempts)))
         _login_attempts.setdefault(key, []).append(time.monotonic())
 
 
@@ -369,6 +408,135 @@ def admin_users():
     return render_page("""<h1>전체 회원 목록</h1><table><thead><tr><th>ID</th><th>아이디</th><th>역할</th><th>가입일</th><th>메모 수</th></tr></thead>
     <tbody>{% for user in users %}<tr><td>{{ user.id }}</td><td>{{ user.username }}</td><td>{{ user.role }}</td>
     <td>{{ user.created_at }}</td><td>{{ user.memo_count }}</td></tr>{% endfor %}</tbody></table>""", users=users)
+
+
+def json_error(status, message):
+    response = jsonify({"error": message})
+    response.status_code = status
+    return response
+
+
+def api_login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if g.current_user is None:
+            return json_error(401, "Authentication required.")
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def note_to_dict(row):
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "body": row["body"],
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+@app.errorhandler(404)
+def handle_api_404(e):
+    if request.path.startswith("/api/"):
+        return json_error(404, "Not found.")
+    return e
+
+
+@app.errorhandler(400)
+def handle_api_400(e):
+    if request.path.startswith("/api/"):
+        return json_error(400, getattr(e, "description", "Bad request."))
+    return e
+
+
+@app.errorhandler(405)
+def handle_api_405(e):
+    if request.path.startswith("/api/"):
+        return json_error(405, "Method not allowed.")
+    return e
+
+
+@app.errorhandler(413)
+def handle_api_413(e):
+    if request.path.startswith("/api/"):
+        return json_error(413, "Request body too large.")
+    return e
+
+
+@app.get("/api/notes")
+@api_login_required
+def api_list_notes():
+    rows = get_db().execute(
+        "SELECT id, title, body, created_at, updated_at FROM note WHERE user_id = ? ORDER BY id",
+        (g.current_user["id"],),
+    ).fetchall()
+    return jsonify({"notes": [note_to_dict(row) for row in rows]})
+
+
+@app.get("/api/csrf-token")
+def api_csrf_token():
+    """Issue a same-origin token required by all state-changing API requests."""
+    return jsonify({"csrf_token": csrf_token()})
+
+
+@app.post("/api/notes")
+@api_login_required
+def api_create_note():
+    if not request.is_json:
+        return json_error(400, "Content-Type must be application/json.")
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return json_error(400, "Request body must be a JSON object.")
+    unexpected_fields = sorted(set(data) - {"title", "body"})
+    if unexpected_fields:
+        return json_error(400, f"Unknown field: {unexpected_fields[0]}.")
+
+    title = data.get("title")
+    if not isinstance(title, str) or not title.strip():
+        return json_error(400, "title is required.")
+    title = title.strip()
+    if len(title) > NOTE_TITLE_MAX_LENGTH:
+        return json_error(400, f"title must be {NOTE_TITLE_MAX_LENGTH} characters or fewer.")
+
+    body = data.get("body", "")
+    if not isinstance(body, str):
+        return json_error(400, "body must be a string.")
+    if len(body) > NOTE_BODY_MAX_LENGTH:
+        return json_error(400, f"body must be {NOTE_BODY_MAX_LENGTH} characters or fewer.")
+
+    now = utc_now()
+    db = get_db()
+    note_count = db.execute(
+        "SELECT COUNT(*) FROM note WHERE user_id = ?", (g.current_user["id"],)
+    ).fetchone()[0]
+    if note_count >= NOTE_MAX_PER_USER:
+        return json_error(409, "Note limit reached.")
+    try:
+        cursor = db.execute(
+            "INSERT INTO note (user_id, title, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (g.current_user["id"], title, body, now, now),
+        )
+    except sqlite3.IntegrityError as error:
+        if str(error) == "note quota exceeded":
+            return json_error(409, "Note limit reached.")
+        raise
+    db.commit()
+    row = db.execute(
+        "SELECT id, title, body, created_at, updated_at FROM note WHERE id = ?", (cursor.lastrowid,)
+    ).fetchone()
+    return jsonify(note_to_dict(row)), 201
+
+
+@app.get("/api/notes/<int:note_id>")
+@api_login_required
+def api_get_note(note_id):
+    row = get_db().execute(
+        "SELECT id, title, body, created_at, updated_at FROM note WHERE id = ? AND user_id = ?",
+        (note_id, g.current_user["id"]),
+    ).fetchone()
+    if row is None:
+        return json_error(404, "Note not found.")
+    return jsonify(note_to_dict(row))
 
 
 if __name__ == "__main__":

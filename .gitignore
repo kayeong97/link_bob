@@ -1,32 +1,19 @@
-# 환경변수 (실제 값이 들어있는 파일만 제외, .env.example은 커밋 허용)
-.env
-.env.*
+# 배포에 필요한 파일만 Git에 포함한다.
+# 새 런타임 파일을 추가하면 아래 allowlist에도 반드시 추가할 것.
+*
+
+!.gitignore
+!.dockerignore
 !.env.example
+!README.md
+!app.py
+!requirements.txt
+!Dockerfile
+!compose.yaml
+!Caddyfile
+!watch_run.py
 
-# 가상환경
-.venv/
-venv/
-env/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-
-# DB / Flask instance
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-instance/
-
-# 로그 / 테스트 산출물
-*.log
-cookies.txt
-flag.txt
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
+# 실제 배포 워크플로만 포함
+!.github/
+!.github/workflows/
+!.github/workflows/deploy.yml

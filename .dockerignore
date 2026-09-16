@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+.venv
+__pycache__
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+data
+flag.txt
+tests
+SECURITY_REPORT.md
+cookies.txt
+*.log
