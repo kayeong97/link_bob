@@ -16,5 +16,6 @@ jobs:
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
             cd link_bob
+            docker compose down
             git pull origin main
             docker compose up -d --build
