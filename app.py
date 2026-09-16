@@ -201,8 +201,8 @@ def record_login_failure(key):
 
 
 STYLE = """<style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#102a43;background:#dff5ff;--navy:#12395b;--ice:#effbff;--blue:#25a7d9;--orange:#ffad42}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% 15%,#fff 0 3px,transparent 4px),radial-gradient(circle at 80% 25%,#fff 0 2px,transparent 3px),linear-gradient(#bfeeff 0,#eafaff 48%,#f8fdff 100%);background-size:90px 90px,120px 120px,auto}
+:root{font-family:system-ui,-apple-system,sans-serif;color:#0d3854;background:#eaf9ff;--navy:#155f8a;--ice:#f0fcff;--blue:#3fc2f0;--orange:#ffb84d}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% 15%,#fff 0 3px,transparent 4px),radial-gradient(circle at 80% 25%,#fff 0 2px,transparent 3px),linear-gradient(#cdf2ff 0,#eefbff 48%,#f9fdff 100%);background-size:90px 90px,120px 120px,auto}
 a{color:#087eac}.nav{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:14px 24px;background:rgba(255,255,255,.9);border-bottom:3px solid #9edff3;box-shadow:0 3px 14px #0b60831c}.nav a{margin-left:14px;font-weight:700;text-decoration:none}.brand{font-size:1.25rem!important;color:var(--navy)!important;margin-left:0!important}.brand-mark{display:inline-grid;place-items:center;width:38px;height:38px;margin-right:8px;border-radius:50%;background:var(--navy);font-size:23px;vertical-align:middle}
 .page{max-width:880px;min-height:calc(100vh - 165px);margin:auto;padding:32px 24px}.flash{padding:12px 15px;margin-bottom:14px;background:#fff4d8;border:1px solid #ffd277;border-radius:12px}
 h1{color:var(--navy)}form{display:grid;gap:11px}.auth{max-width:390px;margin:35px auto;padding:28px;background:rgba(255,255,255,.92);border:1px solid #b9dfec;border-radius:20px;box-shadow:0 15px 40px #17648418}
